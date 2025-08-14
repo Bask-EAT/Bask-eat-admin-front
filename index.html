@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bask:EAT • Admin</title>
+    <script>
+      try {
+        if ("scrollRestoration" in history)
+          history.scrollRestoration = "manual";
+      } catch (e) {}
+      (function () {
+        try {
+          var hash = location.hash;
+          if (hash) {
+            // React에서 이어서 사용할 수 있게 임시 저장
+            sessionStorage.setItem("initial-hash", hash);
+            // 해시 제거 + 맨 위 고정
+            history.replaceState(null, "", location.pathname + location.search);
+            window.scrollTo(0, 0);
+          }
+        } catch (e) {}
+      })();
+    </script>
+
+    <script>
+      (() => {
+        try {
+          const t = localStorage.getItem("admin-theme");
+          if (t === "dark") document.documentElement.classList.add("dark");
+          else document.documentElement.classList.remove("dark");
+        } catch {}
+      })();
+    </script>
+  </head>
+  <body class="bg-bg text-fg">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

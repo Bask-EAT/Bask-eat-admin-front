@@ -1,0 +1,80 @@
+############################
+# OS 공통
+############################
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux 백업 파일
+*~
+
+############################
+# IDE / 에디터
+############################
+# VSCode 설정
+.vscode/
+.history/
+
+# JetBrains 계열 (WebStorm 등)
+.idea/
+*.iml
+
+# 기타 에디터
+*.swp
+*.swo
+
+############################
+# Node.js / React / Vite
+############################
+# 패키지
+node_modules/
+
+# 빌드 산출물
+dist/
+build/
+
+# 캐시
+.cache/
+.next/
+.nuxt/
+out/
+
+# 환경 변수 파일 (민감 정보)
+.env
+.env.local
+.env.*.local
+
+############################
+# 로그 / 디버그
+############################
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+############################
+# 테스트 / 커버리지
+############################
+coverage/
+*.lcov
+
+############################
+# 기타
+############################
+# 압축 / 임시 파일
+*.tmp
+*.temp
+*.bak
+*.zip
+*.tar.gz
+*.rar
+
+# 로컬 DB
+*.sqlite
+*.db

@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Light (기본) */
+:root {
+  color-scheme: light;
+
+  /* 토큰 (필요시 자유롭게 추가) */
+  --bg: #ffffff;
+  --card: #ffffff;
+  --fg: #0b1020;
+  --muted: #5b6b85;
+  --pri: #3b82f6; /* Tailwind blue-500 느낌 */
+  --border: #e5e7eb;
+  --soft-shadow: 0 10px 30px rgba(0,0,0,.06);
+}
+
+/* Dark */
+:root.dark {
+  color-scheme: dark;
+
+  /* 현재 쓰시던 다크 팔레트 반영 */
+  --bg: #0b1020;      /* 페이지 배경 */
+  --card: #0f1427;    /* 카드/입력 배경 */
+  --fg: #e7ecf7;      /* 본문 텍스트 */
+  --muted: #8ea0c0;   /* 보조 텍스트 */
+  --pri: #5b83ff;     /* 포인트(버튼 등) */
+  --border: #1f2742;  /* 구분선 */
+  --soft-shadow: 0 10px 30px rgba(0,0,0,.35);
+}
+
+/* ========== 재사용 유틸 (기존 @apply 리팩토링) ========== */
+.container { @apply max-w-[1200px] mx-auto p-4; }
+.card { @apply bg-card border border-border rounded-2xl p-4 mb-4 shadow-soft; }
+.hdr { @apply flex items-center justify-between; }
+.h1 { @apply text-xl font-bold; }
+.subtle { @apply text-muted text-sm; }
+.btn { @apply inline-flex items-center gap-2 rounded-xl px-3 py-2 font-semibold bg-pri text-white hover:brightness-110; }
+.input { @apply w-full rounded-xl border border-border bg-card px-3 py-2 text-fg; }
+.select { @apply w-full rounded-xl border border-border bg-card px-3 py-2 text-fg; }
+
+.label { @apply block mt-2 mb-1 text-muted; }
+.grid2 { @apply grid md:grid-cols-2 gap-4; }
+.grid3 { @apply grid lg:grid-cols-3 gap-4; }
+.item { @apply flex gap-3 p-3 bg-card border border-border rounded-xl items-center; }
+.thumb { @apply w-14 h-14 bg-[var(--bg)] rounded-lg overflow-hidden flex items-center justify-center; }
+.thumb img { @apply w-full h-full object-cover; }
+.meta-title { @apply font-bold; }
+.meta-sub { @apply text-xs text-muted; }
+.codebox { @apply max-h-[300px] overflow-auto bg-card border border-border rounded-xl p-3 font-mono text-sm; }
+.bad { color: #fecaca; } /* red-200 */
+.ok { color: #86efac; }  /* green-300 */
+
+/* 링크 톤 */
+a { color: #9db7ff; }
+a:hover { filter: brightness(1.1); }
+
+/* 섹션 간격 보정 */
+section + section { margin-top: 1.25rem; }
+
+/* 페이지 배경/기본 텍스트 */
+html, body {
+  @apply bg-bg text-fg;
+}
+:root {
+    --bg:#fff; --card:#fff; --fg:#0b1020; --muted:#5b6b85;
+    --pri:#3b82f6; --border:#e5e7eb; --ok:#33c27f; --bad:#ff6b6b;
+  }
+  :root.dark {
+    --bg:#0b1020; --card:#0f1427; --fg:#e7ecf7; --muted:#8ea0c0;
+    --pri:#5da0ff; --border:#1f2742; --ok:#33c27f; --bad:#ff6b6b;
+  }
+html { overflow-anchor: none; }
