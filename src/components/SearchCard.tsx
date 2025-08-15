@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { api, type ProductResult, type SearchResponse } from '../api'
-import { Button, Field, Select, TextInput } from './ui'
+import { Button, Field, Select, TextInput } from './ui/ui'
 import SmallBtn from './ui/SmallBtn' // 경로 확인
 
 // ---- 유틸

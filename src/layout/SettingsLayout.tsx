@@ -1,6 +1,6 @@
 // src/layout/SettingsLayout.tsx
 import React, { useLayoutEffect } from 'react'
-import ThemeToggle from '@/components/ThemeToggle'
+import ThemeToggle from '@/components/ui/ThemeToggle'
 import { useTheme } from '@/hooks/useTheme'
 
 // 내비게이션에 표시할 섹션들

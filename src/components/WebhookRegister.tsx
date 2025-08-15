@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react'
 import { api } from '../api'
-import { Button, Field, TextInput } from './ui'
+import { Button, Field, TextInput } from './ui/ui'
 
 export default function WebhookRegister() {
   const [url, setUrl] = useState('')

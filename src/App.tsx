@@ -4,7 +4,7 @@ import SearchCard from './components/SearchCard'
 import IndexControl from './components/IndexControl'
 import LogsViewer from './components/LogsViewer'
 import WebhookRegister from './components/WebhookRegister'
-import { Section } from './components/ui'
+import { Section } from './components/ui/ui'
 import { useScrollInit } from './useScrollInit'   // ✅ 추가
 import OpsPanel from '@/components/OpsPanel'
 

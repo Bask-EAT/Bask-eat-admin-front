@@ -1,6 +1,6 @@
 // OpsPanel.tsx
 import React, { useEffect, useMemo, useState } from 'react'
-import { Section, Field, TextInput } from '@/components/ui'
+import { Section, Field, TextInput } from '@/components/ui/ui'
 import ButtonGroup from '@/components/ui/ButtonGroup'
 import SmallBtn from '@/components/ui/SmallBtn'
 import { api, SchedulerConfig } from '@/api'
