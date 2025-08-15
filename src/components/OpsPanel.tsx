@@ -44,9 +44,10 @@ export default function OpsPanel() {
   // 저장 성공 플래그
   const [categoriesSaved, setCategoriesSaved] = useState(false)
 
-  // env - 페이지 범위
+  // env - 페이지 범위 (끝까지 옵션 포함)
   const [startPage, setStartPage] = useState<number | ''>(1)
-  const [endPage, setEndPage] = useState<number | ''>(30)
+  const [endPage, setEndPage] = useState<number | ''>('')   // '' 이면 끝까지
+  const [endToLast, setEndToLast] = useState<boolean>(true) // 기본 '끝까지'
 
   // 카테고리 패널 접기
   const [openCats, setOpenCats] = useState(true)
@@ -134,7 +135,41 @@ export default function OpsPanel() {
     }
   }
 
-  // 초기 상태 로드 (스케줄러/작업, 스케줄 설정, 카테고리 체크 상태)
+  // ✅ (선택) 저장된 .env 로드 → 페이지 범위/임베딩 서버 복원
+  async function loadSavedEnvIfAvailable() {
+    try {
+      const getEnv = (api.ops as any).getEnv
+      if (!getEnv) return
+      const env = await getEnv()
+      // 페이지 범위
+      const sp = env?.EMART_START_PAGE
+      const ep = env?.EMART_END_PAGE
+      const eu = env?.EMB_SERVER
+      if (sp !== undefined && sp !== null && sp !== '') {
+        const n = Number(sp)
+        setStartPage(Number.isFinite(n) && n >= 1 ? n : 1)
+      }
+      if (ep === '' || ep === null || ep === undefined || Number(ep) <= 0) {
+        // 끝까지
+        setEndToLast(true)
+        setEndPage('')
+      } else {
+        const n = Number(ep)
+        if (Number.isFinite(n) && n >= 1) {
+          setEndToLast(false)
+          setEndPage(n)
+        } else {
+          setEndToLast(true)
+          setEndPage('')
+        }
+      }
+      if (typeof eu === 'string') setEmbUrl(eu)
+    } catch (e) {
+      console.debug('getEnv not available or failed:', e)
+    }
+  }
+
+  // 초기 상태 로드
   useEffect(() => {
     ;(async () => {
       try {
@@ -160,19 +195,17 @@ export default function OpsPanel() {
         setCancelled(null)
       }
       await refreshSched()
-      await loadSavedCategories()   // ⬅️ 추가: 최초 1회 카테고리 반영
+      await loadSavedCategories()
+      await loadSavedEnvIfAvailable()
     })()
-    // allKeys는 고정
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // 유효성
   const hasSelected = allKeys.some(k => checked[k])
   const pageRangeValid =
-    startPage !== '' &&
-    endPage !== '' &&
-    startPage >= 1 &&
-    endPage >= startPage
+    (typeof startPage === 'number' && startPage >= 1) &&
+    (endToLast || (typeof endPage === 'number' && endPage >= startPage))
   const embValid = !embUrl || /^https?:\/\//i.test(embUrl)
 
   // ---- 작업 목록 (단일 선택용) ----
@@ -215,10 +248,7 @@ export default function OpsPanel() {
           <span className={`text-xs px-2 py-1 rounded ${categoriesSaved ? 'bg-card text-ok border border-border' : 'bg-card text-muted border border-border'}`}>
             {categoriesSaved ? '저장됨' : '미저장'}
           </span>
-          <SmallBtn
-            variant="primary"
-            onClick={() => setOpenCats(v => !v)}
-          >
+          <SmallBtn variant="primary" onClick={() => setOpenCats(v => !v)}>
             {openCats ? '접기' : '펼치기'}
           </SmallBtn>
         </div>
@@ -260,21 +290,20 @@ export default function OpsPanel() {
                     const payload: Record<string, string> = {}
                     allKeys.forEach(k => { if (checked[k]) payload[k] = CATEGORIES[k] })
                     await api.ops.saveCategories(payload)
-                    await loadSavedCategories()           // ⬅️ 저장 직후 서버 기준 재동기화
+                    await loadSavedCategories()
                   }, 'categories.json 저장 완료')
                 }
               >
                 선택한 카테고리로 저장
               </SmallBtn>
 
-              {/* 카테고리 초기화 버튼 */}
               <SmallBtn
                 variant="danger"
                 disabled={busy}
                 onClick={() =>
                   run(async () => {
                     await api.ops.deleteCategories()
-                    await loadSavedCategories()           // ⬅️ 초기화 직후 동기화
+                    await loadSavedCategories()
                   }, '카테고리 초기화 완료')
                 }
               >
@@ -292,8 +321,8 @@ export default function OpsPanel() {
 
       {/* 페이지 범위 */}
       <Section id="ops-env-pages" title="환경 설정 · 페이지 범위" desc=".env에 시작/끝 페이지 저장">
-        <Field label="페이지 범위" hint="시작 페이지 ≥ 1, 끝 페이지 ≥ 시작 페이지">
-          <div className="flex items-center gap-3">
+        <Field label="페이지 범위" hint="시작 페이지 ≥ 1, 끝 페이지 ≥ 시작 페이지 / 또는 끝까지">
+          <div className="flex flex-wrap items-center gap-3">
             <TextInput
               type="number"
               min={1}
@@ -302,29 +331,51 @@ export default function OpsPanel() {
                 const val = e.target.value
                 setStartPage(val === '' ? '' : Number(val))
               }}
-              className="w-28"
+              className="w-28 flex-none"
             />
+
             <span className="text-muted">~</span>
+
+            {/* 끝까지 체크 (세로깨짐 방지) */}
+            <label className="inline-flex items-center gap-2 shrink-0 whitespace-nowrap break-keep leading-none">
+              <input
+                type="checkbox"
+                checked={endToLast}
+                onChange={e => {
+                  const v = e.target.checked
+                  setEndToLast(v)
+                  if (v) setEndPage('') // 끝까지 ON → endPage 비우기
+                }}
+                className="shrink-0"
+              />
+              <span className="shrink-0">끝까지</span>
+            </label>
+
             <TextInput
               type="number"
               min={1}
-              value={endPage}
+              value={endToLast ? '' : endPage}
               onChange={e => {
                 const val = e.target.value
                 setEndPage(val === '' ? '' : Number(val))
               }}
-              className="w-28"
+              className="w-28 flex-none"
+              disabled={endToLast}
+              placeholder={endToLast ? '자동' : undefined}
             />
+
             <SmallBtn
               variant="primary"
               disabled={busy || !pageRangeValid}
               onClick={() =>
                 run(
-                  () =>
-                    api.ops.saveEnv({
-                      EMART_START_PAGE: Number(startPage),
-                      EMART_END_PAGE: Number(endPage),
-                    }),
+                  async () => {
+                    const payload = {
+                      EMART_START_PAGE: String(startPage),
+                      EMART_END_PAGE: endToLast ? '' : String(endPage ?? ''),
+                    }
+                    await api.ops.saveEnv(payload as any)
+                  },
                   '.env 저장 완료',
                   '저장 실패'
                 )
@@ -339,18 +390,20 @@ export default function OpsPanel() {
       {/* 임베딩 서버 */}
       <Section id="ops-env-emb" title="환경 설정 · 임베딩 서버" desc=".env에 임베딩 서버 URL 저장">
         <Field label="임베딩 서버 URL" hint="예:http://localhost:8000/index/start">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <TextInput
               placeholder="http://..."
               value={embUrl}
               onChange={e => setEmbUrl(e.target.value)}
-              className="w-[320px]"
+              className="w-[320px] flex-none"
             />
             <SmallBtn
               variant="primary"
               disabled={busy || !embValid || !embUrl}
               onClick={() =>
-                run(() => api.ops.saveEnv({ EMB_SERVER: embUrl.trim() }), '.env 저장 완료', '저장 실패')
+                run(async () => {
+                  await api.ops.saveEnv({ EMB_SERVER: String(embUrl).trim() } as any)
+                }, '.env 저장 완료', '저장 실패')
               }
             >
               저장

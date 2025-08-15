@@ -1,4 +1,4 @@
-// api.ts
+// api.ts (수정본)
 export type ProductResult = {
   id: string
   product_name?: string
@@ -61,17 +61,24 @@ export type CategoriesMap = Record<string, string>
 export type SaveCategoriesResponse = {
   status?: string
   path?: string
-  data?: CategoriesMap          // 백엔드가 저장 본문을 돌려줌
+  data?: CategoriesMap
   message?: string
   error?: string
 }
+
+// ---- env 타입(선택) ----
+export type EnvMap = Record<string, string | number | boolean | null | undefined>
 
 // ----- Base URLs -----
 const API_BASE = import.meta.env.VITE_API_BASE as string | undefined
 const OPS_BASE  = import.meta.env.VITE_OPS_BASE  as string | undefined
 
-const apiUrl = (path: string) => (API_BASE ? `${API_BASE}${path}` : path)
-const opsUrl = (path: string) => (OPS_BASE  ? `${OPS_BASE}${path}`  : path)
+// 안전한 조인(뒤/앞 슬래시 중복 제거)
+const joinBase = (base: string | undefined, path: string) =>
+  base ? `${base.replace(/\/+$/,'')}${path}` : path
+
+const apiUrl = (path: string) => joinBase(API_BASE, path)
+const opsUrl = (path: string) => joinBase(OPS_BASE, path)
 
 // 쿠키 인증을 쓰는 경우 true로 두세요.
 const USE_CREDENTIALS = false
@@ -150,27 +157,34 @@ async function deleteJSON<T>(url: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>
 }
 
+// ----- helpers -----
+type HistoryView = 'all' | 'latest' | 'none'
+function withHistory(path: string, history: HistoryView) {
+  const sep = path.includes('?') ? '&' : '?'
+  return `${path}${sep}history=${history}`
+}
+
 // ----- API surface -----
 export const api = {
   // ---------- 검색/멀티모달 ----------
-  async textSearch(query: string, top_k: number) {
-    return postJSON<SearchResponse>(apiUrl('/search/text?history=all'), { query, top_k })
+  async textSearch(query: string, top_k: number, history: HistoryView = 'all') {
+    return postJSON<SearchResponse>(apiUrl(withHistory('/search/text', history)), { query, top_k })
   },
 
-  async imageSearch(file: File, top_k: number) {
+  async imageSearch(file: File, top_k: number, history: HistoryView = 'all') {
     const fd = new FormData()
     fd.append('file', file)
     fd.append('top_k', String(top_k))
-    return postForm<SearchResponse>(apiUrl('/search/image?history=all'), fd)
+    return postForm<SearchResponse>(apiUrl(withHistory('/search/image', history)), fd)
   },
 
-  async multimodalSearch(query: string, file: File, alpha: number, top_k: number) {
+  async multimodalSearch(query: string, file: File, alpha: number, top_k: number, history: HistoryView = 'all') {
     const fd = new FormData()
     fd.append('query', query)
     fd.append('file', file)
     fd.append('alpha', String(alpha))
     fd.append('top_k', String(top_k))
-    return postForm<SearchResponse>(apiUrl('/search/multimodal?history=all'), fd)
+    return postForm<SearchResponse>(apiUrl(withHistory('/search/multimodal', history)), fd)
   },
 
   async startIndex() {
@@ -189,7 +203,6 @@ export const api = {
     return getJSON<{ logs: string[] }>(apiUrl('/index/logs'))
   },
 
-  // 실제 삭제를 서버에 요청 + apiUrl 사용 + 204 대응
   async clearLogs(): Promise<{ ok: boolean }> {
     return deleteJSON<{ ok: boolean }>(apiUrl('/index/logs'))
   },
@@ -200,29 +213,40 @@ export const api = {
     return postForm<{ message: string }>(apiUrl('/index/webhook'), fd)
   },
 
+  
+
   // ---------- 운영(Ops / emart FastAPI) ----------
   ops: {
-    // categories.json 불러오기
     getCategories() {
       return getJSON<CategoriesMap>(opsUrl('/categories'))
     },
 
-    // categories.json 저장
     saveCategories(payload: CategoriesMap) {
       return postJSON<SaveCategoriesResponse>(opsUrl('/save_categories'), payload)
     },
 
-    // categories.json 삭제
     deleteCategories() {
       return deleteJSON<{ status?: string; message?: string; error?: string }>(opsUrl('/delete_categories'))
     },
 
-    // .env 저장 (페이지/임베딩 서버)
-    saveEnv(partial: { EMART_START_PAGE?: number; EMART_END_PAGE?: number; EMB_SERVER?: string }) {
+    // EMART_END_PAGE는 ''(끝까지) 또는 number 허용
+    saveEnv(partial: { EMART_START_PAGE?: number; EMART_END_PAGE?: number | ''; EMB_SERVER?: string }) {
       return postJSON<{ status?: string; error?: string }>(opsUrl('/save_env'), partial)
     },
 
-    // 수동 실행
+    // ✅ 베스트에포트: /env 없거나 비JSON이면 빈 객체 반환(에러로 앱 멈추지 않음)
+    async getEnv(): Promise<EnvMap> {
+      try {
+        const res = await fetch(opsUrl('/env'), withDefaults())
+        if (!res.ok) return {}
+        const ct = res.headers.get('content-type') || ''
+        if (!ct.includes('application/json')) return {}
+        return (await res.json()) as EnvMap
+      } catch {
+        return {}
+      }
+    },
+
     runJson() {
       return postJSON(opsUrl('/run_json'))
     },
@@ -236,7 +260,6 @@ export const api = {
       return postJSON(opsUrl('/run_image'))
     },
 
-    // 업로드
     runFirebaseAll() {
       return postJSON(opsUrl('/run_firebase_all'))
     },
@@ -247,7 +270,6 @@ export const api = {
       return postJSON(opsUrl('/run_firebase_other'))
     },
 
-    // 스케줄러 On/Off/Status
     schedulerOn() {
       return postJSON<SchedulerStatus>(opsUrl('/scheduler/on'))
     },
@@ -258,7 +280,6 @@ export const api = {
       return getJSON<SchedulerStatus>(opsUrl('/scheduler/status'))
     },
 
-    // 작업 취소/재개/상태
     tasksStatus() {
       return getJSON<TaskFlag>(opsUrl('/tasks/status'))
     },
@@ -269,7 +290,6 @@ export const api = {
       return postJSON<TaskFlag>(opsUrl('/tasks/start'))
     },
 
-    // 스케줄러 설정/실행
     getSchedulerConfig() {
       return getJSON<SchedulerConfig>(opsUrl('/scheduler/config'))
     },
@@ -284,4 +304,27 @@ export const api = {
       return postJSON<{ status?: string; error?: string }>(opsUrl(`/scheduler/run-now?which=${which}`))
     },
   },
+}
+
+
+export type CategoryCountsResponse = {
+  counts: Record<string, number>;
+  total: number;
+  ratios: Record<string, number>;
+};
+
+
+export async function fetchCategoryCounts(params?: {
+  only_embedded?: "D" | "R";
+  category_field?: string;
+}): Promise<CategoryCountsResponse> {
+  const q = new URLSearchParams();
+  if (params?.only_embedded) q.set("only_embedded", params.only_embedded);
+  if (params?.category_field) q.set("category_field", params.category_field);
+  const res = await fetch(`${API_BASE}/metrics/category-counts?${q.toString()}`);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `HTTP ${res.status}`);
+  }
+  return res.json();
 }

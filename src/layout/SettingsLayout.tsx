@@ -4,7 +4,7 @@ import ThemeToggle from '@/components/ui/ThemeToggle'
 import { useTheme } from '@/hooks/useTheme'
 
 // 내비게이션에 표시할 섹션들
-const SECTIONS = ['ops', 'search', 'index', 'webhook', 'logs'] as const
+const SECTIONS = ['ops', 'search', 'index', 'webhook', 'logs','metrics'] as const
 type SectionId = (typeof SECTIONS)[number]
 
 // 화면 표기 라벨 매핑
@@ -14,6 +14,7 @@ const LABELS: Record<SectionId, string> = {
   index: 'Indexing',
   webhook: 'Webhook',
   logs: 'Logs',
+  metrics: 'Metrics',
 }
 
 // 헤더 높이(앵커 보정)

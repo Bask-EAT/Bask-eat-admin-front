@@ -5,18 +5,18 @@ import IndexControl from './components/IndexControl'
 import LogsViewer from './components/LogsViewer'
 import WebhookRegister from './components/WebhookRegister'
 import { Section } from './components/ui/ui'
-import { useScrollInit } from './useScrollInit'   // ✅ 추가
+import { useScrollInit } from './useScrollInit'   // ✅ 그대로 사용
 import OpsPanel from '@/components/OpsPanel'
+import CategoryMetrics from '@/components/CategoryMetrics' // 경로가 pages라면 수정하세요.
 
 export default function App() {
-  useScrollInit(56, 8); // ✅ Topbar h-14(=56px) + 여유 8px
+  useScrollInit(56, 8) // ✅ Topbar h-14(=56px) + 여유 8px
 
   return (
     <SettingsLayout>
-        <Section id="ops" title="Scraper & Uploader" desc="카테고리 저장 · 스크래핑 · 업로드 · 스케줄러">
+      <Section id="ops" title="Scraper & Uploader" desc="카테고리 저장 · 스크래핑 · 업로드 · 스케줄러">
         <OpsPanel />
       </Section>
-
 
       <Section id="search" title="Search" desc="Text / Image / Multimodal Search">
         <SearchCard />
@@ -34,7 +34,10 @@ export default function App() {
         <LogsViewer />
       </Section>
 
-      
+      {/* ✅ 새 섹션: 카테고리 파이차트 */}
+      <Section id="metrics" title="Metrics" desc="카테고리별 상품 비중(원그래프)">
+        <CategoryMetrics />
+      </Section>
     </SettingsLayout>
   )
 }
