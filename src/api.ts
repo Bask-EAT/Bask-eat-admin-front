@@ -154,14 +154,14 @@ async function deleteJSON<T>(url: string, init?: RequestInit): Promise<T> {
 export const api = {
   // ---------- 검색/멀티모달 ----------
   async textSearch(query: string, top_k: number) {
-    return postJSON<SearchResponse>(apiUrl('/search/text'), { query, top_k })
+    return postJSON<SearchResponse>(apiUrl('/search/text?history=all'), { query, top_k })
   },
 
   async imageSearch(file: File, top_k: number) {
     const fd = new FormData()
     fd.append('file', file)
     fd.append('top_k', String(top_k))
-    return postForm<SearchResponse>(apiUrl('/search/image'), fd)
+    return postForm<SearchResponse>(apiUrl('/search/image?history=all'), fd)
   },
 
   async multimodalSearch(query: string, file: File, alpha: number, top_k: number) {
@@ -170,7 +170,7 @@ export const api = {
     fd.append('file', file)
     fd.append('alpha', String(alpha))
     fd.append('top_k', String(top_k))
-    return postForm<SearchResponse>(apiUrl('/search/multimodal'), fd)
+    return postForm<SearchResponse>(apiUrl('/search/multimodal?history=all'), fd)
   },
 
   async startIndex() {
