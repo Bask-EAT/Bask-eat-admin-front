@@ -98,22 +98,37 @@ export default function OpsPanel() {
     }).format(d)
   }
 
+  // 입력칸에서만 * 숨기기
+  function starToEmpty(v?: string | number | null) {
+    if (v == null) return ''
+    const s = String(v).trim()
+    return s === '*' ? '' : s
+  }
+
+  // 🔒 “현재 설정”을 고정 라벨로 보여주기
+  const FIXED_ALL_LABEL = '3시 00분'
+  const FIXED_PRICE_LABEL = '매시 30분'
+
+  // 입력 비었을 때 기본 저장값
+  const FIXED_ALL_DEFAULT = { hour: '3', minute: '0' }
+  const FIXED_PRICE_DEFAULT = { hour: '*', minute: '30' }
+
   async function refreshSched(message?: string) {
     setLoadingSched(true)
     try {
       const cfg = await api.ops.getSchedulerConfig()
       setSchedCfg(cfg)
 
-      // 비제어 input 초기화
+      // 비제어 input 초기화: * 는 빈칸으로 숨김
       const ah = document.getElementById('all-hour') as HTMLInputElement | null
       const am = document.getElementById('all-minute') as HTMLInputElement | null
-      if (ah) ah.value = cfg.all?.hour != null ? String(cfg.all.hour) : ''
-      if (am) am.value = cfg.all?.minute != null ? String(cfg.all.minute) : ''
+      if (ah) ah.value = starToEmpty(cfg.all?.hour)
+      if (am) am.value = starToEmpty(cfg.all?.minute)
 
       const ph = document.getElementById('price-hour') as HTMLInputElement | null
       const pm = document.getElementById('price-minute') as HTMLInputElement | null
-      if (ph) ph.value = cfg.price?.hour != null ? String(cfg.price.hour) : ''
-      if (pm) pm.value = cfg.price?.minute != null ? String(cfg.price.minute) : ''
+      if (ph) ph.value = starToEmpty(cfg.price?.hour)
+      if (pm) pm.value = starToEmpty(cfg.price?.minute)
 
       if (message) showToast(message)
     } finally {
@@ -124,7 +139,7 @@ export default function OpsPanel() {
   // ✅ 저장된 categories.json 로드 → 체크박스 반영
   async function loadSavedCategories() {
     try {
-      const saved = await api.ops.getCategories() // { Fruits: "6000...", ... }
+      const saved = await api.ops.getCategories()
       const nextChecked: Record<string, boolean> = {}
       for (const k of allKeys) nextChecked[k] = !!saved?.[k]
       setChecked(nextChecked)
@@ -141,7 +156,6 @@ export default function OpsPanel() {
       const getEnv = (api.ops as any).getEnv
       if (!getEnv) return
       const env = await getEnv()
-      // 페이지 범위
       const sp = env?.EMART_START_PAGE
       const ep = env?.EMART_END_PAGE
       const eu = env?.EMB_SERVER
@@ -150,7 +164,6 @@ export default function OpsPanel() {
         setStartPage(Number.isFinite(n) && n >= 1 ? n : 1)
       }
       if (ep === '' || ep === null || ep === undefined || Number(ep) <= 0) {
-        // 끝까지
         setEndToLast(true)
         setEndPage('')
       } else {
@@ -243,7 +256,6 @@ export default function OpsPanel() {
   return (
     <>
       <Section id="ops-categories" title="카테고리 선택" desc="선택한 카테고리만 저장합니다">
-        {/* 우측 상단 토글 버튼 + 저장 상태 배지 */}
         <div className="flex items-center justify-between mb-2">
           <span className={`text-xs px-2 py-1 rounded ${categoriesSaved ? 'bg-card text-ok border border-border' : 'bg-card text-muted border border-border'}`}>
             {categoriesSaved ? '저장됨' : '미저장'}
@@ -336,7 +348,6 @@ export default function OpsPanel() {
 
             <span className="text-muted">~</span>
 
-            {/* 끝까지 체크 (세로깨짐 방지) */}
             <label className="inline-flex items-center gap-2 shrink-0 whitespace-nowrap break-keep leading-none">
               <input
                 type="checkbox"
@@ -344,7 +355,7 @@ export default function OpsPanel() {
                 onChange={e => {
                   const v = e.target.checked
                   setEndToLast(v)
-                  if (v) setEndPage('') // 끝까지 ON → endPage 비우기
+                  if (v) setEndPage('')
                 }}
                 className="shrink-0"
               />
@@ -568,21 +579,20 @@ export default function OpsPanel() {
 
       {/* 스케줄 시간 설정 */}
       <Section id="ops-schedule" title="스케줄 시간 설정" desc="크론(hour/minute) 또는 */N 지원">
-        <Field label="전체 스크래핑 (job_all)" hint='예: hour=11, minute=0 또는 minute="*/30"'>
+        <Field label="전체 스크래핑 (job_all)" hint='(입력 비우면 기본: 3시 00분)'>
           <div className="flex items-center gap-2">
-            <TextInput placeholder="hour" className="w-24" id="all-hour" />
-            <TextInput placeholder='minute' className="w-24" id="all-minute" />
+            <TextInput placeholder="hour (기본 3)" className="w-24" id="all-hour" />
+            <TextInput placeholder='minute (기본 0)' className="w-24" id="all-minute" />
             <SmallBtn
               variant="primary"
               disabled={loadingSched}
               onClick={() => run(async () => {
-                const h = (document.getElementById('all-hour') as HTMLInputElement).value.trim()
-                const m = (document.getElementById('all-minute') as HTMLInputElement).value.trim()
+                const hRaw = (document.getElementById('all-hour') as HTMLInputElement).value.trim()
+                const mRaw = (document.getElementById('all-minute') as HTMLInputElement).value.trim()
+                const hour = hRaw === '' ? FIXED_ALL_DEFAULT.hour : (isNaN(+hRaw) ? hRaw : String(+hRaw))
+                const minute = mRaw === '' ? FIXED_ALL_DEFAULT.minute : (isNaN(+mRaw) ? mRaw : String(+mRaw))
                 await api.ops.setSchedulerConfig({
-                  all: {
-                    hour: h === '' ? undefined : (isNaN(+h) ? h : +h),
-                    minute: m === '' ? undefined : (isNaN(+m) ? m : +m),
-                  },
+                  all: { hour, minute },
                   persist: true,
                 })
                 await refreshSched('스케줄 저장')
@@ -602,30 +612,30 @@ export default function OpsPanel() {
           </div>
 
           <div className="mt-2 text-xs text-muted">
-            <div>
-              <span className="font-medium">현재 설정</span> — hour: <b>{schedCfg?.all?.hour ?? '-'}</b>, minute: <b>{schedCfg?.all?.minute ?? '-'}</b>
-            </div>
-            <div>
-              <span className="font-medium">다음 실행</span> — <b>{fmtKST(schedCfg?.all?.next_run_time)}</b>
-            </div>
+            <div><span className="font-medium">현재 설정</span> — <b>{FIXED_ALL_LABEL}</b></div>
+            <div><span className="font-medium">다음 실행</span> — <b>{fmtKST(schedCfg?.all?.next_run_time)}</b></div>
+            {schedOn === false && (
+              <div className="mt-1 text-[11px] text-muted">
+                일시정지 상태에서는 표시된 ‘다음 실행’이 자동 실행되지 않습니다. 재개(On) 후 주기대로 동작합니다.
+              </div>
+            )}
           </div>
         </Field>
 
-        <Field label="가격 스크래핑 (job_price)" hint='예: minute=22 또는 minute="*/10"'>
+        <Field label="가격 스크래핑 (job_price)" hint='(입력 비우면 기본: 매시 30분)'>
           <div className="flex items-center gap-2">
-            <TextInput placeholder="hour(옵션)" className="w-24" id="price-hour" />
-            <TextInput placeholder="minute" className="w-24" id="price-minute" />
+            <TextInput placeholder="hour(빈칸=매시)" className="w-24" id="price-hour" />
+            <TextInput placeholder="minute (기본 30)" className="w-24" id="price-minute" />
             <SmallBtn
               variant="primary"
               disabled={loadingSched}
               onClick={() => run(async () => {
-                const h = (document.getElementById('price-hour') as HTMLInputElement).value.trim()
-                const m = (document.getElementById('price-minute') as HTMLInputElement).value.trim()
+                const hRaw = (document.getElementById('price-hour') as HTMLInputElement).value.trim()
+                const mRaw = (document.getElementById('price-minute') as HTMLInputElement).value.trim()
+                const hour = hRaw === '' ? FIXED_PRICE_DEFAULT.hour : (isNaN(+hRaw) ? hRaw : String(+hRaw))
+                const minute = mRaw === '' ? FIXED_PRICE_DEFAULT.minute : (isNaN(+mRaw) ? mRaw : String(+mRaw))
                 await api.ops.setSchedulerConfig({
-                  price: {
-                    hour: h === '' ? undefined : (isNaN(+h) ? h : +h),
-                    minute: m === '' ? undefined : (isNaN(+m) ? m : +m),
-                  },
+                  price: { hour, minute },
                   persist: true,
                 })
                 await refreshSched('스케줄 저장')
@@ -645,12 +655,13 @@ export default function OpsPanel() {
           </div>
 
           <div className="mt-2 text-xs text-muted">
-            <div>
-              <span className="font-medium">현재 설정</span> — hour: <b>{schedCfg?.price?.hour ?? '-'}</b>, minute: <b>{schedCfg?.price?.minute ?? '-'}</b>
-            </div>
-            <div>
-              <span className="font-medium">다음 실행</span> — <b>{fmtKST(schedCfg?.price?.next_run_time)}</b>
-            </div>
+            <div><span className="font-medium">현재 설정</span> — <b>{FIXED_PRICE_LABEL}</b></div>
+            <div><span className="font-medium">다음 실행</span> — <b>{fmtKST(schedCfg?.price?.next_run_time)}</b></div>
+            {schedOn === false && (
+              <div className="mt-1 text-[11px] text-muted">
+                일시정지 상태에서는 표시된 ‘다음 실행’이 자동 실행되지 않습니다. 재개(On) 후 주기대로 동작합니다.
+              </div>
+            )}
           </div>
         </Field>
       </Section>

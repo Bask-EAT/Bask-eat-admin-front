@@ -4,7 +4,7 @@ import { fetchCategoryCounts, CategoryCountsResponse } from "@/api";
 import CategoryPieChartChartJS from "@/components/CategoryPieChartChartJS";
 import CategoryPieChartECharts from "@/components/CategoryPieChartECharts";
 
-const API_BASE = import.meta.env.VITE_API_BASE || ""; // ✅ 여기에 둡니다.
+const API_BASE = import.meta.env.VITE_API_BASE || "";
 
 type OnlyEmbedded = "ALL" | "D" | "R";
 
@@ -14,6 +14,29 @@ export default function CategoryMetrics() {
   const [data, setData] = useState<CategoryCountsResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  // 섹션 접기/펼치기 (초기: 접힘)
+  const [showFrontChart, setShowFrontChart] = useState(false);
+  const [showBackendPng, setShowBackendPng] = useState(false);
+
+  // 카드 배경을 접힘/펼침 상태에 따라 변경
+  const cardClass = (open: boolean) =>
+    [
+      "rounded-xl shadow border p-4",
+      open ? "bg-white" : "bg-gray-50",
+      "border-gray-200",
+    ].join(" ");
+
+  // 보기 좋은 버튼 스타일
+  const collapseBtnClass = (open: boolean) =>
+    [
+      "text-sm px-3 py-1.5 rounded-md border transition",
+      open
+        ? "bg-indigo-600 border-indigo-600 text-white hover:bg-indigo-700"
+        : "bg-gray-100 border-gray-300 text-gray-800 hover:bg-gray-200",
+      "focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500",
+      "dark:focus-visible:ring-indigo-400",
+    ].join(" ");
 
   useEffect(() => {
     let mounted = true;
@@ -34,10 +57,16 @@ export default function CategoryMetrics() {
   }, [onlyEmb]);
 
   const labels = useMemo(() => Object.keys(data?.counts || {}), [data]);
-  const counts = useMemo(() => labels.map((k) => data?.counts?.[k] ?? 0), [labels, data]);
-  const ratios = useMemo(() => labels.map((k) => data?.ratios?.[k] ?? 0), [labels, data]);
+  const counts = useMemo(
+    () => labels.map((k) => data?.counts?.[k] ?? 0),
+    [labels, data]
+  );
+  const ratios = useMemo(
+    () => labels.map((k) => data?.ratios?.[k] ?? 0),
+    [labels, data]
+  );
 
-  // ✅ 백엔드 PNG URL 생성 (현재 필터와 동기화)
+  // 백엔드 PNG URL (필터와 동기화)
   const pngUrl = useMemo(() => {
     const q = new URLSearchParams();
     if (onlyEmb !== "ALL") q.set("only_embedded", onlyEmb);
@@ -79,34 +108,65 @@ export default function CategoryMetrics() {
 
       {!loading && !err && labels.length > 0 && (
         <>
-          {/* 기존 프론트 차트 */}
-          <div className="bg-white rounded-xl shadow p-4 mb-6">
-            {useECharts ? (
-              <CategoryPieChartECharts
-                labels={labels}
-                counts={counts}
-                ratios={ratios}
-                title={`카테고리별 비중 (총 ${data?.total ?? 0}개)`}
-              />
-            ) : (
-              <CategoryPieChartChartJS
-                labels={labels}
-                counts={counts}
-                ratios={ratios}
-                title={`카테고리별 비중 (총 ${data?.total ?? 0}개)`}
-              />
+          {/* 프론트 차트 섹션 */}
+          <div className={cardClass(showFrontChart)}>
+            <div className="flex items-center justify-between mb-3 bg-slate-100 px-3 py-2 rounded-lg">
+              <h2 className="text-lg font-medium text-black">
+                카테고리별 상품 비중 미리보기 (총 {data?.total ?? 0}개)
+              </h2>
+              <button
+                type="button"
+                className={collapseBtnClass(showFrontChart)}
+                aria-expanded={showFrontChart}
+                onClick={() => setShowFrontChart((v) => !v)}
+              >
+                {showFrontChart ? "▾ 접기" : "▸ 펼치기"}
+              </button>
+            </div>
+
+            {showFrontChart && (
+              <>
+                {useECharts ? (
+                  <CategoryPieChartECharts
+                    labels={labels}
+                    counts={counts}
+                    ratios={ratios}
+                    title={`카테고리별 비중 (총 ${data?.total ?? 0}개)`}
+                  />
+                ) : (
+                  <CategoryPieChartChartJS
+                    labels={labels}
+                    counts={counts}
+                    ratios={ratios}
+                    title={`카테고리별 비중 (총 ${data?.total ?? 0}개)`}
+                  />
+                )}
+              </>
             )}
           </div>
 
-          {/* ✅ 백엔드가 렌더링한 PNG를 그대로 표시하는 섹션 */}
-          <div className="bg-white rounded-xl shadow p-4">
-            <h2 className="text-lg font-medium mb-3">백엔드 PNG 미리보기</h2>
-            <img
-              src={pngUrl}
-              alt="Category pie"
-              loading="lazy"
-              className="max-w-full h-auto rounded border"
-            />
+          {/* 백엔드 PNG 섹션 */}
+          <div className={cardClass(showBackendPng) + " mt-6"}>
+            <div className="flex items-center justify-between mb-3 bg-slate-100 px-3 py-2 rounded-lg">
+              <h2 className="text-lg font-medium text-black">PNG 미리보기</h2>
+              <button
+                type="button"
+                className={collapseBtnClass(showBackendPng)}
+                aria-expanded={showBackendPng}
+                onClick={() => setShowBackendPng((v) => !v)}
+              >
+                {showBackendPng ? "▾ 접기" : "▸ 펼치기"}
+              </button>
+            </div>
+
+            {showBackendPng && (
+              <img
+                src={pngUrl}
+                alt="Category pie"
+                loading="lazy"
+                className="max-w-full h-auto rounded border"
+              />
+            )}
           </div>
         </>
       )}
