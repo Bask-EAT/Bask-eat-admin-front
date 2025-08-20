@@ -70,8 +70,8 @@ export type SaveCategoriesResponse = {
 export type EnvMap = Record<string, string | number | boolean | null | undefined>
 
 // ----- Base URLs -----
-const API_BASE = import.meta.env.VITE_API_BASE as string | undefined
-const OPS_BASE  = import.meta.env.VITE_OPS_BASE  as string | undefined
+const API_BASE = import.meta.env.VITE_OPS_EMBED_PREFIX as string | undefined
+const OPS_BASE  = import.meta.env.VITE_OPS_SCRAPE_PREFIX  as string | undefined
 
 // 안전한 조인(뒤/앞 슬래시 중복 제거)
 const joinBase = (base: string | undefined, path: string) =>

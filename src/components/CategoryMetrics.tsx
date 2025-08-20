@@ -4,7 +4,7 @@ import { fetchCategoryCounts, CategoryCountsResponse } from "@/api";
 import CategoryPieChartChartJS from "@/components/CategoryPieChartChartJS";
 import CategoryPieChartECharts from "@/components/CategoryPieChartECharts";
 
-const API_BASE = import.meta.env.VITE_API_BASE || "";
+const API_BASE = import.meta.env.VITE_OPS_EMBED_PREFIX || "";
 
 type OnlyEmbedded = "ALL" | "D" | "R";
 
