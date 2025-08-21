@@ -106,12 +106,14 @@ export default function OpsPanel() {
   }
 
   // 🔒 “현재 설정”을 고정 라벨로 보여주기
-  const FIXED_ALL_LABEL = '3시 00분'
+  const FIXED_ALL_LABEL = '3시 30분'
   const FIXED_PRICE_LABEL = '매시 30분'
+  const FIXED_OLD_LABEL = '4시 30분'
 
   // 입력 비었을 때 기본 저장값
   const FIXED_ALL_DEFAULT = { hour: '3', minute: '0' }
-  const FIXED_PRICE_DEFAULT = { hour: '*', minute: '30' }
+  const FIXED_PRICE_DEFAULT = { hour: '0-2,5-23', minute: '30' }
+  const FIXED_OLD_DEFAULT = { hour: '4', minute: '30' }
 
   async function refreshSched(message?: string) {
     setLoadingSched(true)
@@ -129,6 +131,11 @@ export default function OpsPanel() {
       const pm = document.getElementById('price-minute') as HTMLInputElement | null
       if (ph) ph.value = starToEmpty(cfg.price?.hour)
       if (pm) pm.value = starToEmpty(cfg.price?.minute)
+
+      const oh = document.getElementById('old-hour') as HTMLInputElement | null
+      const om = document.getElementById('old-minute') as HTMLInputElement | null
+      if (oh) oh.value = starToEmpty(cfg.old?.hour)
+      if (om) om.value = starToEmpty(cfg.old?.minute)
 
       if (message) showToast(message)
     } finally {
@@ -624,7 +631,7 @@ export default function OpsPanel() {
 
         <Field label="가격 스크래핑 (job_price)" hint='(입력 비우면 기본: 매시 30분)'>
           <div className="flex items-center gap-2">
-            <TextInput placeholder="hour(빈칸=매시)" className="w-24" id="price-hour" />
+            <TextInput placeholder="hour(빈칸=0-2,5-23시)" className="w-24" id="price-hour" />
             <TextInput placeholder="minute (기본 30)" className="w-24" id="price-minute" />
             <SmallBtn
               variant="primary"
@@ -657,6 +664,49 @@ export default function OpsPanel() {
           <div className="mt-2 text-xs text-muted">
             <div><span className="font-medium">현재 설정</span> — <b>{FIXED_PRICE_LABEL}</b></div>
             <div><span className="font-medium">다음 실행</span> — <b>{fmtKST(schedCfg?.price?.next_run_time)}</b></div>
+            {schedOn === false && (
+              <div className="mt-1 text-[11px] text-muted">
+                일시정지 상태에서는 표시된 ‘다음 실행’이 자동 실행되지 않습니다. 재개(On) 후 주기대로 동작합니다.
+              </div>
+            )}
+          </div>
+        </Field>
+
+        <Field label="오래된 작업 스크래핑 (job_old)" hint='(입력 비우면 기본: 매시 30분)'>
+          <div className="flex items-center gap-2">
+            <TextInput placeholder="hour(빈칸=4시)" className="w-24" id="old-hour" />
+            <TextInput placeholder="minute (기본 30)" className="w-24" id="old-minute" />
+            <SmallBtn
+              variant="primary"
+              disabled={loadingSched}
+              onClick={() => run(async () => {
+                const hRaw = (document.getElementById('old-hour') as HTMLInputElement).value.trim()
+                const mRaw = (document.getElementById('old-minute') as HTMLInputElement).value.trim()
+                const hour = hRaw === '' ? FIXED_OLD_DEFAULT.hour : (isNaN(+hRaw) ? hRaw : String(+hRaw))
+                const minute = mRaw === '' ? FIXED_OLD_DEFAULT.minute : (isNaN(+mRaw) ? mRaw : String(+mRaw))
+                await api.ops.setSchedulerConfig({
+                  old: { hour, minute },
+                  persist: true,
+                })
+                await refreshSched('스케줄 저장')
+              }, '스케줄 저장')}
+            >
+              저장
+            </SmallBtn>
+            <SmallBtn
+              disabled={loadingSched}
+              onClick={() => run(async () => {
+                await api.ops.runJobNow('old')
+                await refreshSched('즉시 실행 요청됨')
+              }, '즉시 실행 요청')}
+            >
+              바로 실행
+            </SmallBtn>
+          </div>
+
+          <div className="mt-2 text-xs text-muted">
+            <div><span className="font-medium">현재 설정</span> — <b>{FIXED_OLD_LABEL}</b></div>
+            <div><span className="font-medium">다음 실행</span> — <b>{fmtKST(schedCfg?.old?.next_run_time)}</b></div>
             {schedOn === false && (
               <div className="mt-1 text-[11px] text-muted">
                 일시정지 상태에서는 표시된 ‘다음 실행’이 자동 실행되지 않습니다. 재개(On) 후 주기대로 동작합니다.

@@ -52,6 +52,7 @@ export type SchedulerConfig = {
   timezone?: string
   all?: { type?: string; hour?: string | number; minute?: string | number; next_run_time?: string }
   price?: { type?: string; hour?: string | number; minute?: string | number; next_run_time?: string }
+  old?: { type?: string; hour?: string | number; minute?: string | number; next_run_time?: string }
 }
 
 export type MessageResponse = { message: string }
@@ -296,11 +297,12 @@ export const api = {
     setSchedulerConfig(payload: {
       all?: { hour?: number | string; minute?: number | string }
       price?: { hour?: number | string; minute?: number | string }
+      old?: { hour?: number | string; minute?: number | string }
       persist?: boolean
     }) {
       return postJSON<SchedulerConfig>(opsUrl('/scheduler/config'), payload)
     },
-    runJobNow(which: 'all' | 'price') {
+    runJobNow(which: 'all' | 'price' | 'old') {
       return postJSON<{ status?: string; error?: string }>(opsUrl(`/scheduler/run-now?which=${which}`))
     },
   },
