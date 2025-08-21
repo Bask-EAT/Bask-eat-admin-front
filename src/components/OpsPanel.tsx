@@ -586,7 +586,7 @@ export default function OpsPanel() {
 
       {/* 스케줄 시간 설정 */}
       <Section id="ops-schedule" title="스케줄 시간 설정" desc="크론(hour/minute) 또는 */N 지원">
-        <Field label="전체 스크래핑 (job_all)" hint='(입력 비우면 기본: 3시 00분)'>
+        <Field label="전체 스크래핑 (job_all)" hint='(입력 비우면 기본: 3시 30분)'>
           <div className="flex items-center gap-2">
             <TextInput placeholder="hour (기본 3)" className="w-24" id="all-hour" />
             <TextInput placeholder='minute (기본 0)' className="w-24" id="all-minute" />
@@ -672,7 +672,7 @@ export default function OpsPanel() {
           </div>
         </Field>
 
-        <Field label="오래된 작업 스크래핑 (job_old)" hint='(입력 비우면 기본: 매시 30분)'>
+        <Field label="오래된 작업 스크래핑 (job_old)" hint='(입력 비우면 기본: 4시 30분)'>
           <div className="flex items-center gap-2">
             <TextInput placeholder="hour(빈칸=4시)" className="w-24" id="old-hour" />
             <TextInput placeholder="minute (기본 30)" className="w-24" id="old-minute" />
