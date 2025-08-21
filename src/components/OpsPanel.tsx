@@ -111,7 +111,7 @@ export default function OpsPanel() {
   const FIXED_OLD_LABEL = '4시 30분'
 
   // 입력 비었을 때 기본 저장값
-  const FIXED_ALL_DEFAULT = { hour: '3', minute: '0' }
+  const FIXED_ALL_DEFAULT = { hour: '3', minute: '30' }
   const FIXED_PRICE_DEFAULT = { hour: '0-2,5-23', minute: '30' }
   const FIXED_OLD_DEFAULT = { hour: '4', minute: '30' }
 
@@ -589,7 +589,7 @@ export default function OpsPanel() {
         <Field label="전체 스크래핑 (job_all)" hint='(입력 비우면 기본: 3시 30분)'>
           <div className="flex items-center gap-2">
             <TextInput placeholder="hour (기본 3)" className="w-24" id="all-hour" />
-            <TextInput placeholder='minute (기본 0)' className="w-24" id="all-minute" />
+            <TextInput placeholder='minute (기본 30)' className="w-24" id="all-minute" />
             <SmallBtn
               variant="primary"
               disabled={loadingSched}
