@@ -1,0 +1,11 @@
+version: "3.9"
+services:
+  admin-spa:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: rag-admin-spa:prod
+    container_name: rag-admin-spa
+    ports: # ❌ 호스트 포트 노출 안 함
+      - "5137:80"
+    restart: unless-stopped
