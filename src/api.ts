@@ -1,4 +1,6 @@
-// api.ts (수정본)
+// api.ts (완성본)
+
+// ---------- Types ----------
 export type ProductResult = {
   id: string
   product_name?: string
@@ -70,21 +72,45 @@ export type SaveCategoriesResponse = {
 // ---- env 타입(선택) ----
 export type EnvMap = Record<string, string | number | boolean | null | undefined>
 
-// ----- Base URLs -----
-const API_BASE = import.meta.env.VITE_OPS_EMBED_PREFIX as string | undefined
-const OPS_BASE  = import.meta.env.VITE_OPS_SCRAPE_PREFIX  as string | undefined
+export type CategoryCountsResponse = {
+  counts: Record<string, number>;
+  total: number;
+  ratios: Record<string, number>;
+};
 
-// 안전한 조인(뒤/앞 슬래시 중복 제거)
-const joinBase = (base: string | undefined, path: string) =>
-  base ? `${base.replace(/\/+$/,'')}${path}` : path
+// ---------- Base URL & Helpers ----------
+const ORIGIN =
+  (import.meta.env.VITE_API_ORIGIN as string | undefined)?.replace(/\/+$/,'') || '';
 
-const apiUrl = (path: string) => joinBase(API_BASE, path)
-const opsUrl = (path: string) => joinBase(OPS_BASE, path)
+const DEFAULT_API_BASE = '/ops/embed';
+const DEFAULT_OPS_BASE = '/ops/scrape';
 
-// 쿠키 인증을 쓰는 경우 true로 두세요.
-const USE_CREDENTIALS = false
+function normBase(v: string | undefined, fallback: string) {
+  let x = (v ?? '').trim();
+  if (!x) x = fallback;
+  if (!x.startsWith('/')) x = '/' + x;  // 항상 슬래시로 시작
+  return x.replace(/\/+$/,'');          // 끝 슬래시 제거
+}
 
-// 공통 fetch 옵션 조립
+const API_BASE = normBase(import.meta.env.VITE_OPS_EMBED_PREFIX as string | undefined, DEFAULT_API_BASE);
+const OPS_BASE  = normBase(import.meta.env.VITE_OPS_SCRAPE_PREFIX  as string | undefined, DEFAULT_OPS_BASE);
+
+if (import.meta.env.DEV) {
+  console.info('[api] ORIGIN        =', ORIGIN || '(current origin)');
+  console.info('[api] API_BASE      =', API_BASE);
+  console.info('[api] OPS_BASE      =', OPS_BASE);
+}
+
+// 절대 URL 조인: origin + base + path
+const joinAbs = (origin: string, base: string, path: string) =>
+  `${origin}${base}${path.startsWith('/') ? path : `/${path}`}`;
+
+const apiUrl = (path: string) => joinAbs(ORIGIN, API_BASE, path);
+const opsUrl = (path: string) => joinAbs(ORIGIN, OPS_BASE, path);
+
+// ---------- Fetch defaults ----------
+const USE_CREDENTIALS = false; // 쿠키 인증을 쓰는 경우 true
+
 function withDefaults(init?: RequestInit): RequestInit {
   return {
     credentials: USE_CREDENTIALS ? 'include' : 'same-origin',
@@ -92,20 +118,25 @@ function withDefaults(init?: RequestInit): RequestInit {
   }
 }
 
-// ----- JSON helpers -----
-async function getJSON<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, withDefaults(init))
+// ---------- JSON helpers ----------
+async function ensureJsonResponse(res: Response, method: string, url: string) {
   if (!res.ok) {
     const text = await res.text().catch(() => '')
-    throw new Error(`GET ${url} -> ${res.status} ${res.statusText}${text ? `: ${text}` : ''}`)
+    throw new Error(`${method} ${url} -> ${res.status} ${res.statusText}${text ? `: ${text}` : ''}`)
   }
-  if (res.status === 204) return {} as T
+  if (res.status === 204) return null
   const ct = res.headers.get('content-type') || ''
   if (!ct.includes('application/json')) {
     const text = await res.text().catch(() => '')
-    throw new Error(`GET ${url} -> unexpected content-type: "${ct}"${text ? `, body: ${text}` : ''}`)
+    throw new Error(`${method} ${url} -> unexpected content-type: "${ct}"${text ? `, body: ${text}` : ''}`)
   }
-  return res.json() as Promise<T>
+  return res.json()
+}
+
+async function getJSON<T>(url: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, withDefaults(init))
+  const json = await ensureJsonResponse(res, 'GET', url)
+  return (json ?? {}) as T
 }
 
 async function postJSON<T>(url: string, body?: any, init?: RequestInit): Promise<T> {
@@ -115,57 +146,30 @@ async function postJSON<T>(url: string, body?: any, init?: RequestInit): Promise
     body: body !== undefined ? JSON.stringify(body) : undefined,
     ...init,
   }))
-  if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    throw new Error(`POST ${url} -> ${res.status} ${res.statusText}${text ? `: ${text}` : ''}`)
-  }
-  if (res.status === 204) return {} as T
-  const ct = res.headers.get('content-type') || ''
-  if (!ct.includes('application/json')) {
-    const text = await res.text().catch(() => '')
-    throw new Error(`POST ${url} -> unexpected content-type: "${ct}"${text ? `, body: ${text}` : ''}`)
-  }
-  return res.json() as Promise<T>
+  const json = await ensureJsonResponse(res, 'POST', url)
+  return (json ?? {}) as T
 }
 
 async function postForm<T>(url: string, fd: FormData, init?: RequestInit): Promise<T> {
   const res = await fetch(url, withDefaults({ method: 'POST', body: fd, ...init }))
-  if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    throw new Error(`POST(form) ${url} -> ${res.status} ${res.statusText}${text ? `: ${text}` : ''}`)
-  }
-  if (res.status === 204) return {} as T
-  const ct = res.headers.get('content-type') || ''
-  if (!ct.includes('application/json')) {
-    const text = await res.text().catch(() => '')
-    throw new Error(`POST(form) ${url} -> unexpected content-type: "${ct}"${text ? `, body: ${text}` : ''}`)
-  }
-  return res.json() as Promise<T>
+  const json = await ensureJsonResponse(res, 'POST(form)', url)
+  return (json ?? {}) as T
 }
 
 async function deleteJSON<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, withDefaults({ method: 'DELETE', ...(init || {}) }))
-  if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    throw new Error(`DELETE ${url} -> ${res.status} ${res.statusText}${text ? `: ${text}` : ''}`)
-  }
-  if (res.status === 204) return {} as T
-  const ct = res.headers.get('content-type') || ''
-  if (!ct.includes('application/json')) {
-    const text = await res.text().catch(() => '')
-    throw new Error(`DELETE ${url} -> unexpected content-type: "${ct}"${text ? `, body: ${text}` : ''}`)
-  }
-  return res.json() as Promise<T>
+  const json = await ensureJsonResponse(res, 'DELETE', url)
+  return (json ?? {}) as T
 }
 
-// ----- helpers -----
+// ---------- helpers ----------
 type HistoryView = 'all' | 'latest' | 'none'
 function withHistory(path: string, history: HistoryView) {
   const sep = path.includes('?') ? '&' : '?'
   return `${path}${sep}history=${history}`
 }
 
-// ----- API surface -----
+// ---------- API surface ----------
 export const api = {
   // ---------- 검색/멀티모달 ----------
   async textSearch(query: string, top_k: number, history: HistoryView = 'all') {
@@ -188,6 +192,7 @@ export const api = {
     return postForm<SearchResponse>(apiUrl(withHistory('/search/multimodal', history)), fd)
   },
 
+  // ---------- 인덱싱 ----------
   async startIndex() {
     return postJSON<MessageResponse>(apiUrl('/index/start'))
   },
@@ -213,8 +218,6 @@ export const api = {
     fd.append('url', urlStr)
     return postForm<{ message: string }>(apiUrl('/index/webhook'), fd)
   },
-
-  
 
   // ---------- 운영(Ops / emart FastAPI) ----------
   ops: {
@@ -308,14 +311,7 @@ export const api = {
   },
 }
 
-
-export type CategoryCountsResponse = {
-  counts: Record<string, number>;
-  total: number;
-  ratios: Record<string, number>;
-};
-
-
+// ---------- Metrics ----------
 export async function fetchCategoryCounts(params?: {
   only_embedded?: "D" | "R";
   category_field?: string;
@@ -323,10 +319,16 @@ export async function fetchCategoryCounts(params?: {
   const q = new URLSearchParams();
   if (params?.only_embedded) q.set("only_embedded", params.only_embedded);
   if (params?.category_field) q.set("category_field", params.category_field);
-  const res = await fetch(`${API_BASE}/metrics/category-counts?${q.toString()}`);
+  const url = apiUrl(`/metrics/category-counts?${q.toString()}`);
+  const res = await fetch(url, withDefaults());
   if (!res.ok) {
     const text = await res.text();
     throw new Error(text || `HTTP ${res.status}`);
   }
-  return res.json();
+  const ct = res.headers.get('content-type') || '';
+  if (!ct.includes('application/json')) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`GET ${url} -> unexpected content-type: "${ct}"${text ? `, body: ${text}` : ''}`);
+  }
+  return res.json() as Promise<CategoryCountsResponse>;
 }

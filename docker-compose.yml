@@ -1,11 +1,18 @@
-version: "3.9"
 services:
   admin-spa:
     build:
       context: .
       dockerfile: Dockerfile
-    image: rag-admin-spa:prod
-    container_name: rag-admin-spa
-    ports: # ❌ 호스트 포트 노출 안 함
+    image: admin-spa:latest
+    container_name: admin-spa
+    env_file:
+      - .env
+    ports:
       - "5137:80"
     restart: unless-stopped
+    networks:
+      - edge-net
+
+networks:
+  edge-net:
+    external: true
